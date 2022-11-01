@@ -1,0 +1,6 @@
+url=http://localhost:8000
+header="Content-Type:multipart/form-data"
+form="name=test"
+form="ext=txt"
+form="owner=wangjun"
+form="bytes=@test.txt"

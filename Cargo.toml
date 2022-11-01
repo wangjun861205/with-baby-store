@@ -1,0 +1,19 @@
+[package]
+name = "with-baby-store"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-multipart = "0.4.0"
+actix-web = "4.2.1"
+anyhow = "1.0.65"
+bytes = "1.2.1"
+chrono = "0.4.22"
+futures = "0.3.24"
+lazy_static = "1.4.0"
+mongodb = "2.3.1"
+mongodb-gridfs = "0.2.2"
+serde = { version = "1.0.147", features=["derive"] }
+tokio = { version = "1.21.2", features=["io-util"] }

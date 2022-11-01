@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: with-baby-store-mongo-0
+spec:
+  capacity:
+    storage: 2Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  storageClassName: with-baby-store-mongo
+  hostPath: 
+   path: /home/wangjun/hobby/with-baby-store/mongo-0
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: with-baby-store-mongo-1
+spec:
+  capacity:
+    storage: 2Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  storageClassName: with-baby-store-mongo
+  hostPath: 
+   path: /home/wangjun/hobby/with-baby-store/mongo-1
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: with-baby-store-mongo-2
+spec:
+  capacity:
+    storage: 2Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  storageClassName: with-baby-store-mongo
+  hostPath: 
+   path: /home/wangjun/hobby/with-baby-store/mongo-2
