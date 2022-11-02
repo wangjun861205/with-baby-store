@@ -33,6 +33,10 @@ impl Store for MongoStore {
         let b = self.bucket.clone();
         let c = self.collection.clone();
         return Box::pin(async move {
+            let ext = infer::get(&f.bytes)
+                .ok_or(Error::msg("unknown file type"))?
+                .mime_type()
+                .to_owned();
             let id = b
                 .lock()
                 .unwrap()
@@ -44,7 +48,7 @@ impl Store for MongoStore {
                 .insert_one(
                     FileInfo {
                         name: f.name,
-                        ext: f.ext,
+                        ext: ext,
                         owner: f.owner,
                         key: id.to_hex(),
                         create_at: Utc::now().to_rfc3339(),
@@ -59,42 +63,25 @@ impl Store for MongoStore {
     fn get(
         &self,
         id: impl AsRef<str>,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<FileOutput>, Error>>>>
-    {
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<u8>, Error>>>> {
         let b = self.bucket.clone();
         let c = self.collection.clone();
         let id = id.as_ref().to_owned();
         return Box::pin(async move {
             let mut bs: Vec<u8> = Vec::new();
-            if let Some(info) = c
-                .lock()
+            b.lock()
                 .unwrap()
-                .find_one(Some(doc! {"key": &id}), None)
+                .open_download_stream(ObjectId::parse_str(&id).map_err(|e| Error::from(e))?)
                 .await
                 .map_err(|e| Error::new(e))?
-            {
-                b.lock()
-                    .unwrap()
-                    .open_download_stream(ObjectId::parse_str(&id).map_err(|e| Error::from(e))?)
-                    .await
-                    .map_err(|e| Error::new(e))?
-                    .for_each(|v| {
-                        for b in v {
-                            bs.push(b);
-                        }
-                        ready(())
-                    })
-                    .await;
-                return Ok(Some(FileOutput {
-                    name: info.name,
-                    ext: info.ext,
-                    owner: info.owner,
-                    key: info.key,
-                    create_at: info.create_at,
-                    bytes: bs,
-                }));
-            }
-            Ok(None)
+                .for_each(|v| {
+                    for b in v {
+                        bs.push(b);
+                    }
+                    ready(())
+                })
+                .await;
+            Ok(bs)
         });
     }
 
@@ -135,7 +122,6 @@ mod test {
         let store = MongoStore::new(bucket, collection);
         let file = FileInput {
             name: "test.txt".into(),
-            ext: "txt".into(),
             bytes: b"hello world".to_vec(),
             owner: "wangjun".into(),
         };
@@ -153,6 +139,6 @@ mod test {
         let collection = db.collection("files");
         let store = MongoStore::new(bucket, collection);
         let f = store.get("635bdd289395ef004c776291").await.unwrap();
-        println!("{:?}", f.unwrap().bytes)
+        println!("{:?}", f)
     }
 }

@@ -15,7 +15,6 @@ pub struct FileInfo {
 #[derive(Debug, Clone, Serialize)]
 pub struct FileInput {
     pub name: String,
-    pub ext: String,
     pub bytes: Vec<u8>,
     pub owner: String,
 }
@@ -32,10 +31,7 @@ pub struct FileOutput {
 
 pub trait Store {
     fn put(&self, file: FileInput) -> Pin<Box<dyn Future<Output = Result<String, Error>>>>;
-    fn get(
-        &self,
-        id: impl AsRef<str>,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<FileOutput>, Error>>>>;
+    fn get(&self, id: impl AsRef<str>) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, Error>>>>;
     fn info(
         &self,
         id: impl AsRef<str>,

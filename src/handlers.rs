@@ -79,7 +79,6 @@ pub async fn put<S: Store>(
 ) -> Result<Json<PutResponse>, Error> {
     let mut input = FileInput {
         name: "".into(),
-        ext: "".into(),
         owner: "".into(),
         bytes: Vec::new(),
     };
@@ -92,7 +91,6 @@ pub async fn put<S: Store>(
         }
         match field.name() {
             "name" => input.name = from_utf8(&buffer)?.to_owned(),
-            "ext" => input.ext = from_utf8(&buffer)?.to_owned(),
             "owner" => input.owner = from_utf8(&buffer)?.to_owned(),
             "bytes" => input.bytes = buffer.to_vec(),
             _ => {}
