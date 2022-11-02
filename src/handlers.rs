@@ -52,10 +52,7 @@ impl Display for Error {
     }
 }
 
-pub async fn get<S: Store>(
-    store: Data<S>,
-    id: Path<(String,)>,
-) -> Result<Json<Option<FileOutput>>, Error> {
+pub async fn get<S: Store>(store: Data<S>, id: Path<(String,)>) -> Result<Json<Vec<u8>>, Error> {
     let f = store.get(&id.0).await?;
     Ok(Json(f))
 }
