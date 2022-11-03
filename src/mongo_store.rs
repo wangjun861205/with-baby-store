@@ -1,11 +1,10 @@
-use crate::core::{FileInfo, FileInput, FileOutput, Store};
+use crate::core::{FileInfo, FileInput, Store};
 use anyhow::Error;
 use chrono::Utc;
-use futures::StreamExt;
+use futures::{Stream, StreamExt};
 use mongodb::bson::doc;
 use mongodb::{bson::oid::ObjectId, Collection};
 use mongodb_gridfs::GridFSBucket;
-use std::future::ready;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
@@ -62,27 +61,22 @@ impl Store for MongoStore {
 
     fn get(
         &self,
-        id: impl AsRef<str>,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<u8>, Error>>>> {
+        id: &str,
+    ) -> Pin<Box<dyn Future<Output = Result<Pin<Box<dyn Stream<Item = Vec<u8>>>>, Error>>>> {
         let b = self.bucket.clone();
         let c = self.collection.clone();
-        let id = id.as_ref().to_owned();
-        return Box::pin(async move {
-            let mut bs: Vec<u8> = Vec::new();
-            b.lock()
+        let id = id.to_owned();
+        let mut bs: Vec<u8> = Vec::new();
+        Box::pin(async move {
+            let s = b
+                .lock()
                 .unwrap()
                 .open_download_stream(ObjectId::parse_str(&id).map_err(|e| Error::from(e))?)
                 .await
-                .map_err(|e| Error::new(e))?
-                .for_each(|v| {
-                    for b in v {
-                        bs.push(b);
-                    }
-                    ready(())
-                })
-                .await;
-            Ok(bs)
-        });
+                .map_err(|e| Error::new(e))?;
+            let res: Pin<Box<dyn Stream<Item = Vec<u8>>>> = Box::pin(s);
+            Ok(res)
+        })
     }
 
     fn info(
@@ -138,7 +132,11 @@ mod test {
         let bucket = GridFSBucket::new(db.clone(), None);
         let collection = db.collection("files");
         let store = MongoStore::new(bucket, collection);
-        let f = store.get("635bdd289395ef004c776291").await.unwrap();
-        println!("{:?}", f)
+        let mut f = store.get("635bdd289395ef004c776291").await.unwrap();
+        let mut l = Vec::new();
+        while let Some(mut item) = f.next().await {
+            l.append(&mut item)
+        }
+        println!("{:?}", l)
     }
 }

@@ -3,7 +3,7 @@ use std::{
     str::{from_utf8, Utf8Error},
 };
 
-use crate::core::{FileInfo, FileInput, FileOutput, Store};
+use crate::core::{FileInfo, FileInput, Store};
 use actix_multipart::Multipart;
 use actix_web::{
     body::BoxBody,
@@ -11,7 +11,7 @@ use actix_web::{
     web::{Data, Json, Path},
     HttpResponse, ResponseError,
 };
-use bytes::{BufMut, BytesMut};
+use bytes::{BufMut, Bytes, BytesMut};
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 
@@ -52,9 +52,10 @@ impl Display for Error {
     }
 }
 
-pub async fn get<S: Store>(store: Data<S>, id: Path<(String,)>) -> Result<Json<Vec<u8>>, Error> {
-    let f = store.get(&id.0).await?;
-    Ok(Json(f))
+pub async fn get<S: Store>(store: Data<S>, id: Path<(String,)>) -> Result<HttpResponse, Error> {
+    let s = store.get(&id.0).await?;
+    let ss = s.map(|v| Ok::<Bytes, anyhow::Error>(Bytes::from(v)));
+    Ok(HttpResponse::Ok().streaming(ss))
 }
 
 pub async fn info<S: Store>(

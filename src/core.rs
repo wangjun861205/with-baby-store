@@ -1,4 +1,5 @@
 use anyhow::Error;
+use futures::Stream;
 use serde::{Deserialize, Serialize};
 use std::future::Future;
 use std::pin::Pin;
@@ -31,7 +32,10 @@ pub struct FileOutput {
 
 pub trait Store {
     fn put(&self, file: FileInput) -> Pin<Box<dyn Future<Output = Result<String, Error>>>>;
-    fn get(&self, id: impl AsRef<str>) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, Error>>>>;
+    fn get(
+        &self,
+        id: &str,
+    ) -> Pin<Box<dyn Future<Output = Result<Pin<Box<dyn Stream<Item = Vec<u8>>>>, Error>>>>;
     fn info(
         &self,
         id: impl AsRef<str>,
