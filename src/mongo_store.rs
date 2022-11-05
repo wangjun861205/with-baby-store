@@ -7,20 +7,16 @@ use mongodb::{bson::oid::ObjectId, Collection};
 use mongodb_gridfs::GridFSBucket;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
 pub struct MongoStore {
-    bucket: Arc<Mutex<GridFSBucket>>,
-    collection: Arc<Mutex<Collection<FileInfo>>>,
+    bucket: GridFSBucket,
+    collection: Collection<FileInfo>,
 }
 
 impl MongoStore {
     pub fn new(bucket: GridFSBucket, collection: Collection<FileInfo>) -> Self {
-        Self {
-            bucket: Arc::new(Mutex::new(bucket)),
-            collection: Arc::new(Mutex::new(collection)),
-        }
+        Self { bucket, collection }
     }
 }
 
@@ -29,7 +25,7 @@ impl Store for MongoStore {
         &self,
         f: FileInput,
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<String, Error>>>> {
-        let b = self.bucket.clone();
+        let mut b = self.bucket.clone();
         let c = self.collection.clone();
         return Box::pin(async move {
             let mime = infer::get(&f.bytes)
@@ -37,24 +33,20 @@ impl Store for MongoStore {
                 .mime_type()
                 .to_owned();
             let id = b
-                .lock()
-                .unwrap()
                 .upload_from_stream(&f.name, f.bytes.as_ref(), None)
                 .await
                 .map_err(|e| Error::new(e))?;
-            c.lock()
-                .unwrap()
-                .insert_one(
-                    FileInfo {
-                        name: f.name,
-                        mime: mime,
-                        owner: f.owner,
-                        key: id.to_hex(),
-                        create_at: Utc::now().to_rfc3339(),
-                    },
-                    None,
-                )
-                .await?;
+            c.insert_one(
+                FileInfo {
+                    name: f.name,
+                    mime: mime,
+                    owner: f.owner,
+                    key: id.to_hex(),
+                    create_at: Utc::now().to_rfc3339(),
+                },
+                None,
+            )
+            .await?;
             Ok(id.to_hex())
         });
     }
@@ -67,8 +59,6 @@ impl Store for MongoStore {
         let id = id.to_owned();
         Box::pin(async move {
             let s = b
-                .lock()
-                .unwrap()
                 .open_download_stream(ObjectId::parse_str(&id).map_err(|e| Error::from(e))?)
                 .await
                 .map_err(|e| Error::new(e))?;
@@ -85,8 +75,6 @@ impl Store for MongoStore {
         let id = id.as_ref().to_owned();
         return Box::pin(async move {
             let info = c
-                .lock()
-                .map_err(|e| Error::msg(e.to_string()))?
                 .find_one(
                     Some(doc! {
                         "key": &id
