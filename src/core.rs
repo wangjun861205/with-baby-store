@@ -7,7 +7,7 @@ use std::pin::Pin;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileInfo {
     pub name: String,
-    pub ext: String,
+    pub mime: String,
     pub owner: String,
     pub key: String,
     pub create_at: String,

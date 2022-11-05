@@ -1,7 +1,7 @@
 use crate::core::{FileInfo, FileInput, Store};
 use anyhow::Error;
 use chrono::Utc;
-use futures::{Stream, StreamExt};
+use futures::Stream;
 use mongodb::bson::doc;
 use mongodb::{bson::oid::ObjectId, Collection};
 use mongodb_gridfs::GridFSBucket;
@@ -32,7 +32,7 @@ impl Store for MongoStore {
         let b = self.bucket.clone();
         let c = self.collection.clone();
         return Box::pin(async move {
-            let ext = infer::get(&f.bytes)
+            let mime = infer::get(&f.bytes)
                 .ok_or(Error::msg("unknown file type"))?
                 .mime_type()
                 .to_owned();
@@ -47,7 +47,7 @@ impl Store for MongoStore {
                 .insert_one(
                     FileInfo {
                         name: f.name,
-                        ext: ext,
+                        mime: mime,
                         owner: f.owner,
                         key: id.to_hex(),
                         create_at: Utc::now().to_rfc3339(),
@@ -64,9 +64,7 @@ impl Store for MongoStore {
         id: &str,
     ) -> Pin<Box<dyn Future<Output = Result<Pin<Box<dyn Stream<Item = Vec<u8>>>>, Error>>>> {
         let b = self.bucket.clone();
-        let c = self.collection.clone();
         let id = id.to_owned();
-        let mut bs: Vec<u8> = Vec::new();
         Box::pin(async move {
             let s = b
                 .lock()
@@ -105,6 +103,7 @@ impl Store for MongoStore {
 #[cfg(test)]
 mod test {
     use super::*;
+    use futures::StreamExt;
     #[tokio::test]
     async fn test_mongo_put() {
         let client = mongodb::Client::with_uri_str("mongodb://localhost:27017")

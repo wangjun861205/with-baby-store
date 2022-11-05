@@ -13,7 +13,7 @@ use actix_web::{
 };
 use bytes::{BufMut, Bytes, BytesMut};
 use futures::StreamExt;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 #[derive(Debug)]
 pub struct Error(anyhow::Error);
@@ -53,9 +53,14 @@ impl Display for Error {
 }
 
 pub async fn get<S: Store>(store: Data<S>, id: Path<(String,)>) -> Result<HttpResponse, Error> {
-    let s = store.get(&id.0).await?;
-    let ss = s.map(|v| Ok::<Bytes, anyhow::Error>(Bytes::from(v)));
-    Ok(HttpResponse::Ok().streaming(ss))
+    if let Some(info) = store.info(&id.0).await? {
+        let s = store.get(&id.0).await?;
+        let ss = s.map(|v| Ok::<Bytes, anyhow::Error>(Bytes::from(v)));
+        return Ok(HttpResponse::Ok()
+            .append_header(("Content-Type", info.mime))
+            .streaming(ss));
+    }
+    Ok(HttpResponse::NotFound().body(BoxBody::new("file not exists")))
 }
 
 pub async fn info<S: Store>(

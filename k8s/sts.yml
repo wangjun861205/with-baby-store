@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: with-baby-store-mongo
+  labels: 
+    group: with-baby-store
+spec:
+  selector:
+    matchLabels:
+      app: with-baby-store-mongo
+  serviceName: with-baby-store-mongo
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: with-baby-store-mongo
+        group: with-baby-store
+    spec:
+      containers:
+      - name: with-baby-store-mongo
+        image: mongo:latest
+        args: ["--bind_ip_all", "--replSet=rs0"]
+        ports:
+        - containerPort: 27017
+          name: mongo
+        volumeMounts:
+        - name: data
+          mountPath: /data/db
+
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: with-baby-store-mongo
+      resources:
+        requests:
+          storage: 2Gi
+
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: with-baby-store
+  labels:
+    app: with-baby-store
+    group: with-baby-store
+spec:
+  selector:
+    matchLabels:
+      app: with-baby-store
+  serviceName: with-baby-store
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: with-baby-store
+        group: with-baby-store
+    spec:
+      containers:
+      - name: with-baby-store
+        image: with-baby-store:0.1
+        ports:
+        - containerPort: 8000
+          name: web
+        env:
+          - name: MONGODB_URL
+            value: mongodb://with-baby-store-mongo-0.with-baby-store-mongo:27017,with-baby-store-mongo-1.with-baby-store-mongo:27017,with-baby-store-mongo-2.with-baby-store-mongo:27017/?replicaSet=rs0
+          - name: RUST_LOG
+            value: info,actix_web=debug

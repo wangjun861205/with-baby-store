@@ -1,6 +1,5 @@
-url=http://localhost:8000
+url=http://172.19.0.2:31642/store/
 header="Content-Type:multipart/form-data"
 form="name=test"
-form="ext=txt"
 form="owner=wangjun"
-form="bytes=@test.txt"
+form="bytes=@IMG_20210224_095026.jpg"
